@@ -1,2 +1,3 @@
 # mtgin
-gin router based dhtml pages builder
+
+[gin](https://github.com/gin-gonic/gin) router based [dhtml](https://github.com/mitoteam/dhtml) pages builder
