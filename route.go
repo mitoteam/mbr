@@ -1,11 +1,8 @@
 package mbr
 
 import (
-	"context"
 	"path"
 )
-
-type RouterHandleFunc func(ctx context.Context)
 
 type Route struct {
 	name      string
@@ -22,5 +19,4 @@ func (route *Route) muxPath() string {
 	} else {
 		return path.Join(route.fullPath, "{$}")
 	}
-
 }
