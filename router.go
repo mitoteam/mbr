@@ -1,6 +1,7 @@
 package mbr
 
 import (
+	"log"
 	"net/http"
 )
 
@@ -9,20 +10,16 @@ func Handler(rootController Controller) http.Handler {
 		routes: make(map[string]*Route),
 	}
 
-	scanRoutes(rootController)
-
-	router.routes["/"] = &Route{
-		Path: "/",
-	}
-
-	router.routes["/aa"] = &Route{
-		Path: "/aa",
+	for _, route := range scanRoutes(rootController) {
+		route.fullPath = rootController.BasePath() + "/" + route.Path
+		router.routes[route.name] = &route
 	}
 
 	mux := http.NewServeMux()
 
-	for path, route := range router.routes {
-		mux.HandleFunc(path+"/{$}", buildHandleRouteFunc(route))
+	for name, route := range router.routes {
+		log.Printf("Path found %s => %s", name, route.fullPath)
+		mux.HandleFunc(route.fullPath+"/{$}", buildHandleRouteFunc(route))
 	}
 
 	return mux
