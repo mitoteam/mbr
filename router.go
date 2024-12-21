@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"path"
 	"reflect"
+	"strings"
 )
 
 func Handler(rootController Controller) http.Handler {
@@ -19,7 +20,16 @@ func Handler(rootController Controller) http.Handler {
 
 		for _, route := range router.routes {
 			//log.Printf("Route: %s => %s", name, route.muxPath())
-			router.mux.HandleFunc(route.muxPath(), buildRouteHandlerFunc(route))
+
+			if route.Method == "" {
+				//register for any method (no method specified in pattern)
+				router.mux.HandleFunc(route.serveMuxPattern(), buildRouteHandlerFunc(route))
+			} else {
+				//register for each method
+				for _, method := range route.MethodList() {
+					router.mux.HandleFunc(method+" "+route.serveMuxPattern(), buildRouteHandlerFunc(route))
+				}
+			}
 		}
 	}
 
@@ -30,8 +40,19 @@ func Dump() {
 	if router == nil {
 		fmt.Println("mbr.Handler() never called")
 	} else {
-		for name, route := range router.routes {
-			fmt.Printf("%s => %s\n", name, route.muxPath())
+		for _, route := range router.routes {
+			var sb strings.Builder
+
+			sb.WriteString(route.Name() + " => ")
+
+			methods := strings.Join(route.MethodList(), " ")
+			if methods != "" {
+				sb.WriteString(methods + ": ")
+			}
+
+			sb.WriteString(route.serveMuxPattern())
+
+			fmt.Println(sb.String())
 		}
 	}
 }
@@ -47,7 +68,7 @@ var router *mbrRouterT
 
 func (router *mbrRouterT) scanRoutesR(ctrl Controller, basePath string) {
 	for _, route := range scanControllerMethods(ctrl) {
-		route.fullPath = path.Join(basePath, route.Path)
+		route.fullPath = path.Join(basePath, route.Pattern)
 
 		if route.Child != nil {
 			//go deeper

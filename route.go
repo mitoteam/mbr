@@ -2,15 +2,19 @@ package mbr
 
 import (
 	"path"
+	"regexp"
+	"strings"
 )
 
 type Route struct {
 	name      string
 	fullPath  string
-	Path      string
-	HandleF   RouterHandleFunc
-	Child     Controller
+	Pattern   string
+	Method    string // empty = any, or space-separated methods list. examples "GET", "POST GET", "HEAD, GET"
 	NotStrict bool
+
+	HandleF RouterHandleFunc
+	Child   Controller
 }
 
 func (route *Route) Name() string {
@@ -21,7 +25,16 @@ func (route *Route) FullPath() string {
 	return route.fullPath
 }
 
-func (route *Route) muxPath() string {
+func (route *Route) MethodList() []string {
+	s := strings.ToUpper(route.Method)
+
+	s = regexp.MustCompile("[^A-Z]+").ReplaceAllString(s, " ")
+
+	return strings.Fields(s)
+}
+
+// https://pkg.go.dev/net/http#ServeMux
+func (route *Route) serveMuxPattern() string {
 	if route.NotStrict {
 		return route.fullPath
 	} else {
