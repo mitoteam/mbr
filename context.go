@@ -13,17 +13,19 @@ type Context struct {
 	//originalCtx context.Context //not needed yet
 
 	route   *Route
+	w       http.ResponseWriter
 	request *http.Request
 }
 
-func newContext(request *http.Request, route *Route) *Context {
+func newContext(w http.ResponseWriter, r *http.Request, route *Route) *Context {
 	ctx := &Context{
 		//originalCtx: request.Context(), //not needed yet
+		w:     w,
 		route: route,
 	}
 
-	httpCtx := context.WithValue(request.Context(), mbrContextKey, ctx)
-	ctx.request = request.WithContext(httpCtx)
+	httpCtx := context.WithValue(r.Context(), mbrContextKey, ctx)
+	ctx.request = r.WithContext(httpCtx)
 
 	return ctx
 }
@@ -39,6 +41,10 @@ func MbrContext(r *http.Request) *Context {
 
 func (ctx *Context) Route() *Route {
 	return ctx.route
+}
+
+func (ctx *Context) Writer() http.ResponseWriter {
+	return ctx.w
 }
 
 func (ctx *Context) Request() *http.Request {
