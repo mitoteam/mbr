@@ -5,7 +5,9 @@ import (
 	"net/http"
 )
 
-const mbrContextKey = "mitoteam/mbrContextKey"
+type mbrContextKeyType string
+
+var mbrContextKey mbrContextKeyType = "mitoteam/mbrContextKey"
 
 type Context struct {
 	parent context.Context

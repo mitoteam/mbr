@@ -15,6 +15,7 @@ func buildHandleRouteFunc(route *Route) http.HandlerFunc {
 		//create new one and set to request's context
 		if mbrContext == nil {
 			mbrContext = newContext(r.Context())
+			mbrContext.Route = route
 
 			ctx := context.WithValue(r.Context(), mbrContextKey, mbrContext)
 			r = r.WithContext(ctx)
