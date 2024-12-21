@@ -19,7 +19,7 @@ func Handler(rootController Controller) http.Handler {
 
 		for _, route := range router.routes {
 			//log.Printf("Route: %s => %s", name, route.muxPath())
-			router.mux.HandleFunc(route.muxPath(), buildHandleRouteFunc(route))
+			router.mux.HandleFunc(route.muxPath(), buildRouteHandlerFunc(route))
 		}
 	}
 

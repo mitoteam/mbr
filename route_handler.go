@@ -1,36 +1,33 @@
 package mbr
 
 import (
-	"context"
 	"net/http"
 )
 
-type RouterHandleFunc func(r *http.Request) any
+type RouterHandleFunc func(ctx *Context) any
 
-func buildHandleRouteFunc(route *Route) http.HandlerFunc {
+func buildRouteHandlerFunc(route *Route) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		//check mbr.Context
+		//check for existing mbr.Context
 		mbrContext := MbrContext(r)
 
 		//create new one and set to request's context
 		if mbrContext == nil {
-			mbrContext = newContext(r.Context())
-			mbrContext.Route = route
-
-			ctx := context.WithValue(r.Context(), mbrContextKey, mbrContext)
-			r = r.WithContext(ctx)
+			mbrContext = newContext(r, route)
 		}
-
-		mbrContext.Route = route
 
 		if route.HandleF == nil {
 			w.Write([]byte(" route.HandleF is empty"))
 		} else {
-			output := route.HandleF(r)
+			output := route.HandleF(mbrContext)
 
 			if v, ok := output.(string); ok {
 				w.Write([]byte(v))
 			}
 		}
 	}
+}
+
+func processHandlerOutput() {
+
 }
