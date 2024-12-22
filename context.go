@@ -1,7 +1,6 @@
 package mbr
 
 import (
-	"context"
 	"net/http"
 )
 
@@ -9,7 +8,7 @@ type mbrContextKeyType string
 
 var mbrContextKey mbrContextKeyType = "mitoteam/mbrContextKey"
 
-type Context struct {
+type MbrContext struct {
 	//originalCtx context.Context //not needed yet
 
 	route   *Route
@@ -17,36 +16,27 @@ type Context struct {
 	request *http.Request
 }
 
-func newContext(w http.ResponseWriter, r *http.Request, route *Route) *Context {
-	ctx := &Context{
-		//originalCtx: request.Context(), //not needed yet
-		w:     w,
-		route: route,
-	}
+// gets MbrContext from request's http.Context
+func Context(r *http.Request) *MbrContext {
+	//log.Println("Asking MbrContext")
+	value := r.Context().Value(mbrContextKey)
 
-	httpCtx := context.WithValue(r.Context(), mbrContextKey, ctx)
-	ctx.request = r.WithContext(httpCtx)
-
-	return ctx
-}
-
-// gets mbr.Context from request's http.Context
-func MbrContext(r *http.Request) *Context {
-	if ctx, ok := r.Context().Value(mbrContextKey).(*Context); ok {
+	if ctx, ok := value.(*MbrContext); ok {
+		//log.Println("MbrContext found")
 		return ctx
 	}
 
 	return nil
 }
 
-func (ctx *Context) Route() *Route {
+func (ctx *MbrContext) Route() *Route {
 	return ctx.route
 }
 
-func (ctx *Context) Writer() http.ResponseWriter {
+func (ctx *MbrContext) Writer() http.ResponseWriter {
 	return ctx.w
 }
 
-func (ctx *Context) Request() *http.Request {
+func (ctx *MbrContext) Request() *http.Request {
 	return ctx.request
 }

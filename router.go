@@ -23,11 +23,11 @@ func Handler(rootController Controller) http.Handler {
 
 			if route.Method == "" {
 				//register for any method (no method specified in pattern)
-				router.mux.HandleFunc(route.serveMuxPattern(), buildRouteHandlerFunc(route))
+				router.mux.Handle(route.serveMuxPattern(), route.buildRouteHandler())
 			} else {
 				//register for each method
 				for _, method := range route.MethodList() {
-					router.mux.HandleFunc(method+" "+route.serveMuxPattern(), buildRouteHandlerFunc(route))
+					router.mux.Handle(method+" "+route.serveMuxPattern(), route.buildRouteHandler())
 				}
 			}
 		}
@@ -101,6 +101,7 @@ func scanControllerMethods(ctrl Controller) (routes []Route) {
 
 			//give it a name from type
 			route.name = elementType.String() + "." + m.Name
+			route.ctrl = ctrl
 
 			routes = append(routes, route)
 		}
