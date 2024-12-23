@@ -15,17 +15,17 @@ import (
 type RouterHandleFunc func(ctx *MbrContext) any
 
 type Route struct {
-	name      string
-	fullPath  string
-	Pattern   string
-	Method    string // empty = any, or space-separated methods list. examples "GET", "POST GET", "HEAD, GET"
-	NotStrict bool
+	name        string
+	fullPath    string
+	PathPattern string
+	Method      string // empty = any, or space-separated methods list. examples "GET", "POST GET", "HEAD, GET"
+	NotStrict   bool
 
 	//Middlewares MiddlewareList
 	ctrl Controller
 
-	HandleF RouterHandleFunc
-	Child   Controller
+	HandleF         RouterHandleFunc
+	ChildController Controller
 }
 
 func (route *Route) Name() string {
@@ -69,10 +69,18 @@ func (route *Route) buildRouteHandler() http.Handler {
 		}
 	}))
 
-	//apply middlewares
+	//put handler through controller's middlewares
 	middlewares := route.ctrl.Middlewares()
 	for i := len(middlewares) - 1; i >= 0; i-- {
 		routeHandler = middlewares[i](routeHandler)
+	}
+
+	//put handler through parents middlewares
+	for _, ctrl := range route.ctrl.ParentControllers() {
+		middlewares := ctrl.Middlewares()
+		for i := len(middlewares) - 1; i >= 0; i-- {
+			routeHandler = middlewares[i](routeHandler)
+		}
 	}
 
 	// add internal middleware that sets context (added last, so will be called first)

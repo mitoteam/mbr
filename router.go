@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"path"
 	"reflect"
+	"slices"
 	"strings"
 )
 
@@ -25,7 +26,7 @@ func Handler(rootController Controller) http.Handler {
 				//register for any method (no method specified in pattern)
 				router.mux.Handle(route.serveMuxPattern(), route.buildRouteHandler())
 			} else {
-				//register for each method
+				//register for each specified method
 				for _, method := range route.MethodList() {
 					router.mux.Handle(method+" "+route.serveMuxPattern(), route.buildRouteHandler())
 				}
@@ -68,12 +69,17 @@ var router *mbrRouterT
 
 func (router *mbrRouterT) scanRoutesR(ctrl Controller, basePath string) {
 	for _, route := range scanControllerMethods(ctrl) {
-		route.fullPath = path.Join(basePath, route.Pattern)
+		route.fullPath = path.Join(basePath, route.PathPattern)
 
-		if route.Child != nil {
+		if route.ChildController != nil {
 			//go deeper
 			//TODO: cycle recursion check
-			router.scanRoutesR(route.Child, route.fullPath)
+
+			parents := slices.Clone(ctrl.ParentControllers())
+			parents = append(parents, ctrl)
+			route.ChildController.SetParentControllers(parents)
+
+			router.scanRoutesR(route.ChildController, route.fullPath)
 		} else {
 			router.routes[route.name] = &route
 		}
