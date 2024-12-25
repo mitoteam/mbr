@@ -1,12 +1,16 @@
 package mbr
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"path"
 	"reflect"
+	"runtime"
 	"slices"
 	"strings"
+
+	"github.com/mitoteam/mttools"
 )
 
 func Handler(rootController Controller) http.Handler {
@@ -44,6 +48,10 @@ func Dump() {
 		for _, route := range router.routes {
 			var sb strings.Builder
 
+			if route.signature != "" {
+				sb.WriteString("[" + route.signature + "] ")
+			}
+
 			sb.WriteString(route.Name() + " => ")
 
 			methods := strings.Join(route.MethodList(), " ")
@@ -56,6 +64,47 @@ func Dump() {
 			fmt.Println(sb.String())
 		}
 	}
+}
+
+func Url(f any, args ...any) (r string, err error) {
+	if router == nil {
+		return "", errors.New("router is not initialized")
+	}
+
+	funcT := reflect.TypeOf(f)
+	funcV := reflect.ValueOf(f)
+
+	if funcT.Kind() != reflect.Func {
+		return "", errors.New("f is not a func")
+	}
+
+	mSignature, ok := routeMethodSignature(funcV)
+	if !ok {
+		return "", errors.New("can not calculate method's signature")
+	}
+
+	route, ok := router.routes[mSignature]
+	if !ok {
+		return "", fmt.Errorf("Unknown route: %s", mSignature)
+	}
+
+	r = route.FullPath()
+
+	if len(args)%2 != 0 {
+		return "", fmt.Errorf("args count should be even")
+	}
+
+	for i := 0; i < len(args); i += 2 {
+		//log.Printf("Arg %s: %v\n", args[i], args[i+1])
+		argName := mttools.AnyToString(args[i])
+		argValue := mttools.AnyToString(args[i+1])
+
+		if argName != "" && argValue != "" {
+			r = strings.ReplaceAll(r, "{"+argName+"}", argValue)
+		}
+	}
+
+	return r, nil
 }
 
 // =================== INTERNAL STUFF =======================
@@ -81,32 +130,36 @@ func (router *mbrRouterT) scanRoutesR(ctrl Controller, basePath string) {
 
 			router.scanRoutesR(route.ChildController, route.fullPath)
 		} else {
-			router.routes[route.name] = &route
+			router.routes[route.signature] = &route
 		}
 	}
 }
 
 func scanControllerMethods(ctrl Controller) (routes []Route) {
-	ptrType := reflect.TypeOf(ctrl)
-	elementType := ptrType.Elem()
+	ctrlPointerType := reflect.TypeOf(ctrl)
+	ctrlElementType := ctrlPointerType.Elem()
 
 	//log.Println("scanRoutes: " + elementType.String())
 
-	for i := 0; i < ptrType.NumMethod(); i++ {
-		m := ptrType.Method(i)
+	for i := 0; i < ctrlPointerType.NumMethod(); i++ {
+		m := ctrlPointerType.Method(i)
 		methodType := m.Type
 		//log.Printf("  method %s: %+v", m.Name, methodType)
 
 		if methodType.Kind() == reflect.Func && //it is a function
-			methodType.NumIn() == 1 && methodType.In(0) == ptrType && // with one arg which is pointer receiver to struct
+			methodType.NumIn() == 1 && methodType.In(0) == ctrlPointerType && // with one arg which is pointer receiver to struct
 			methodType.NumOut() == 1 && methodType.Out(0) == reflect.TypeFor[Route]() { // returning one value and this value is Route
 			//} COMMENT TO MARK if conditions end [crazy go formatting. easier to accept rather then fight]
 
 			// call method for it to return Route struct
 			route := m.Func.Call([]reflect.Value{reflect.ValueOf(ctrl)})[0].Interface().(Route)
 
+			//route.dbg = fmt.Sprintf("%#v", reflect.New(methodType))
+			//route.dbg = runtime.FuncForPC(m.Func.Pointer()).Name()
+			route.signature, _ = routeMethodSignature(m.Func)
+
 			//give it a name from type
-			route.name = elementType.String() + "." + m.Name
+			route.name = ctrlElementType.String() + "." + m.Name
 			route.ctrl = ctrl
 
 			routes = append(routes, route)
@@ -114,4 +167,25 @@ func scanControllerMethods(ctrl Controller) (routes []Route) {
 	}
 
 	return routes
+}
+
+func routeMethodSignature(funcPointerValue reflect.Value) (string, bool) {
+	rf := runtime.FuncForPC(funcPointerValue.Pointer())
+
+	if rf == nil {
+		return "", false
+	}
+
+	r := rf.Name()
+
+	if r == "" {
+		return "", false
+	}
+
+	//TODO: Dig deeper for this "-fm" suffix for indirect method calls
+	// https://docs.google.com/document/d/1bMwCey-gmqZVTpRax-ESeVuZGmjwbocYs1iHplK-cjo/pub
+	// https://www.reddit.com/r/golang/comments/1hkq71e/question_reflection_of_struct_method_pointer/
+	r, _ = strings.CutSuffix(r, "-fm")
+
+	return r, true
 }

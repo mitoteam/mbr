@@ -15,6 +15,7 @@ import (
 type RouterHandleFunc func(ctx *MbrContext) any
 
 type Route struct {
+	signature   string
 	name        string
 	fullPath    string
 	PathPattern string
