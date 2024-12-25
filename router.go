@@ -26,7 +26,10 @@ func Handler(rootController Controller) http.Handler {
 		for _, route := range router.routes {
 			//log.Printf("Route: %s => %s", name, route.muxPath())
 
-			if route.Method == "" {
+			if route.StaticFS != nil {
+				staticServer := http.FileServerFS(route.StaticFS)
+				router.mux.Handle(route.serveMuxPattern()+"/", http.StripPrefix(route.serveMuxPattern(), staticServer))
+			} else if route.Method == "" {
 				//register for any method (no method specified in pattern)
 				router.mux.Handle(route.serveMuxPattern(), route.buildRouteHandler())
 			} else {
@@ -43,7 +46,7 @@ func Handler(rootController Controller) http.Handler {
 
 func Dump() {
 	if router == nil {
-		fmt.Println("mbr.Handler() never called")
+		panic("mbr.Handler() never called")
 	} else {
 		for _, route := range router.routes {
 			var sb strings.Builder

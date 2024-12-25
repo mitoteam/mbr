@@ -3,6 +3,7 @@ package mbr
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"path"
 	"reflect"
@@ -15,18 +16,17 @@ import (
 type RouterHandleFunc func(ctx *MbrContext) any
 
 type Route struct {
-	signature   string
-	name        string
-	fullPath    string
-	PathPattern string
-	Method      string // empty = any, or space-separated methods list. examples "GET", "POST GET", "HEAD, GET"
-	NotStrict   bool
+	signature string
+	name      string
+	fullPath  string
+	ctrl      Controller
 
-	//Middlewares MiddlewareList
-	ctrl Controller
-
+	PathPattern     string
+	Method          string // empty = any, or space-separated methods list. examples "GET", "POST GET", "HEAD, GET"
+	NotStrict       bool
 	HandleF         RouterHandleFunc
 	ChildController Controller
+	StaticFS        fs.FS
 }
 
 func (route *Route) Name() string {
@@ -47,7 +47,7 @@ func (route *Route) MethodList() []string {
 
 // https://pkg.go.dev/net/http#ServeMux
 func (route *Route) serveMuxPattern() string {
-	if route.NotStrict {
+	if route.NotStrict || route.StaticFS != nil {
 		return route.fullPath
 	} else {
 		return path.Join(route.fullPath, "{$}")
@@ -110,7 +110,8 @@ func processHandlerOutput(ctx *MbrContext, w http.ResponseWriter, output any) {
 
 	case error:
 		//errors issue 500 server error status
-		http.Error(w, v.Error(), http.StatusInternalServerError)
+		out := fmt.Sprintf("Internal Error: %s", v.Error())
+		http.Error(w, out, http.StatusInternalServerError)
 
 	default:
 		//try to convert it to string
