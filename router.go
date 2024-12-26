@@ -66,13 +66,13 @@ func Dump() {
 	}
 }
 
-func UrlE(f any, args ...any) (r string, err error) {
+func UrlE(routeRef any, args ...any) (r string, err error) {
 	if router == nil {
 		return "", errors.New("router is not initialized")
 	}
 
-	funcT := reflect.TypeOf(f)
-	funcV := reflect.ValueOf(f)
+	funcT := reflect.TypeOf(routeRef)
+	funcV := reflect.ValueOf(routeRef)
 
 	if funcT.Kind() != reflect.Func {
 		return "", errors.New("f is not a func")
@@ -107,8 +107,8 @@ func UrlE(f any, args ...any) (r string, err error) {
 	return r, nil
 }
 
-func Url(f any, args ...any) (r string) {
-	url, err := UrlE(f, args...)
+func Url(routeRef any, args ...any) (r string) {
+	url, err := UrlE(routeRef, args...)
 
 	if err != nil {
 		panic(err)

@@ -57,3 +57,18 @@ func (ctx *MbrContext) Set(key string, value any) *MbrContext {
 	ctx.values.Set(key, value)
 	return ctx
 }
+
+// Helper to issue https redirects
+func (ctx *MbrContext) Redirect(code int, url string) {
+	http.Redirect(ctx.Writer(), ctx.Request(), url, code)
+}
+
+// Helper to issue https redirects. routeRef and args passed to UrlE()
+func (ctx *MbrContext) RedirectUrl(code int, routeRef any, args ...any) error {
+	if url, err := UrlE(routeRef, args...); err != nil {
+		return err
+	} else {
+		ctx.Redirect(code, url)
+		return nil //no error
+	}
+}
