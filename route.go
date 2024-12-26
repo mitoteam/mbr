@@ -7,7 +7,6 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
-	"path"
 	"reflect"
 	"regexp"
 	"strings"
@@ -27,7 +26,6 @@ type Route struct {
 
 	PathPattern     string
 	Method          string // empty = any, or space-separated methods list. examples "GET", "POST GET", "HEAD, GET"
-	NotStrict       bool
 	HandleF         RouterHandleFunc
 	ChildController Controller
 	StaticFS        fs.FS
@@ -56,10 +54,8 @@ func (route *Route) serveMuxPattern() (pathPattern string) {
 		return route.fullPath
 	} else if route.StaticFS != nil {
 		return route.fullPath + "/"
-	} else if route.NotStrict {
-		return route.fullPath
 	} else {
-		return path.Join(route.fullPath, "{$}")
+		return route.fullPath
 	}
 }
 
