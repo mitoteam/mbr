@@ -18,6 +18,8 @@ import (
 type RouterHandleFunc func(ctx *MbrContext) any
 
 type Route struct {
+	WithMiddlewareListBase
+
 	signature string
 	name      string
 	fullPath  string
@@ -71,18 +73,15 @@ func (route *Route) buildRouteHandler() http.Handler {
 		routeHandler = route.routeHandlerCustom()
 	}
 
+	//put handler through route's middlewares
+	routeHandler = route.ApplyMiddlewares(routeHandler)
+
 	//put handler through controller's middlewares
-	middlewares := route.ctrl.Middlewares()
-	for i := len(middlewares) - 1; i >= 0; i-- {
-		routeHandler = middlewares[i](routeHandler)
-	}
+	routeHandler = route.ctrl.ApplyMiddlewares(routeHandler)
 
 	//put handler through parents middlewares
-	for _, ctrl := range route.ctrl.ParentControllers() {
-		middlewares := ctrl.Middlewares()
-		for i := len(middlewares) - 1; i >= 0; i-- {
-			routeHandler = middlewares[i](routeHandler)
-		}
+	for _, parentController := range route.ctrl.ParentControllers() {
+		routeHandler = parentController.ApplyMiddlewares(routeHandler)
 	}
 
 	// add internal middleware that sets context (added last, so will be called first)
@@ -90,8 +89,9 @@ func (route *Route) buildRouteHandler() http.Handler {
 		//create new context and set to request's context
 		mbrContext := &MbrContext{
 			//originalCtx: request.Context(), //not needed yet
-			w:     w,
-			route: route,
+			w:      w,
+			route:  route,
+			values: mttools.NewValues(),
 		}
 
 		httpCtx := context.WithValue(r.Context(), mbrContextKey, mbrContext)
