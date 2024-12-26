@@ -2,6 +2,8 @@ package mbr
 
 import (
 	"net/http"
+
+	"github.com/mitoteam/mttools"
 )
 
 type mbrContextKeyType string
@@ -14,6 +16,8 @@ type MbrContext struct {
 	route   *Route
 	w       http.ResponseWriter
 	request *http.Request
+
+	values mttools.Values
 }
 
 // gets MbrContext from request's http.Context
@@ -39,4 +43,17 @@ func (ctx *MbrContext) Writer() http.ResponseWriter {
 
 func (ctx *MbrContext) Request() *http.Request {
 	return ctx.request
+}
+
+func (ctx *MbrContext) GetOk(key string) (any, bool) {
+	return ctx.values.GetOk(key)
+}
+
+func (ctx *MbrContext) Get(key string) any {
+	return ctx.values.Get(key)
+}
+
+func (ctx *MbrContext) Set(key string, value any) *MbrContext {
+	ctx.values.Set(key, value)
+	return ctx
 }
