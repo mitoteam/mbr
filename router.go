@@ -66,7 +66,7 @@ func Dump() {
 	}
 }
 
-func Url(f any, args ...any) (r string, err error) {
+func UrlE(f any, args ...any) (r string, err error) {
 	if router == nil {
 		return "", errors.New("router is not initialized")
 	}
@@ -105,6 +105,16 @@ func Url(f any, args ...any) (r string, err error) {
 	}
 
 	return r, nil
+}
+
+func Url(f any, args ...any) (r string) {
+	url, err := UrlE(f, args...)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return url
 }
 
 // =================== INTERNAL STUFF =======================
