@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"path"
 	"reflect"
 	"runtime"
@@ -88,20 +89,33 @@ func UrlE(routeRef any, args ...any) (r string, err error) {
 		return "", fmt.Errorf("Unknown route: %s", mSignature)
 	}
 
-	r = route.FullPath()
-
 	if len(args)%2 != 0 {
 		return "", fmt.Errorf("args count should be even")
 	}
+
+	r = route.FullPath()
+	queryValues := url.Values{}
 
 	for i := 0; i < len(args); i += 2 {
 		//log.Printf("Arg %s: %v\n", args[i], args[i+1])
 		argName := mttools.AnyToString(args[i])
 		argValue := mttools.AnyToString(args[i+1])
 
-		if argName != "" && argValue != "" {
-			r = strings.ReplaceAll(r, "{"+argName+"}", argValue)
+		if argName != "" {
+			if strings.Contains(r, "{"+argName+"}") {
+				if argValue == "" {
+					return "", fmt.Errorf("Path values can not be empty (empty value for '%s')", argName)
+				}
+
+				r = strings.ReplaceAll(r, "{"+argName+"}", argValue)
+			} else {
+				queryValues.Set(argName, argValue)
+			}
 		}
+	}
+
+	if len(queryValues) > 0 {
+		r += "?" + queryValues.Encode()
 	}
 
 	return r, nil
