@@ -3,7 +3,9 @@ package mbr
 import (
 	"context"
 	"fmt"
+	"io"
 	"io/fs"
+	"log"
 	"net/http"
 	"path"
 	"reflect"
@@ -27,6 +29,7 @@ type Route struct {
 	HandleF         RouterHandleFunc
 	ChildController Controller
 	StaticFS        fs.FS
+	FileFromFS      string
 }
 
 func (route *Route) Name() string {
@@ -46,8 +49,12 @@ func (route *Route) MethodList() []string {
 }
 
 // https://pkg.go.dev/net/http#ServeMux
-func (route *Route) serveMuxPattern() string {
-	if route.NotStrict || route.StaticFS != nil {
+func (route *Route) serveMuxPattern() (pathPattern string) {
+	if route.FileFromFS != "" {
+		return route.fullPath
+	} else if route.StaticFS != nil {
+		return route.fullPath + "/"
+	} else if route.NotStrict {
 		return route.fullPath
 	} else {
 		return path.Join(route.fullPath, "{$}")
@@ -55,20 +62,14 @@ func (route *Route) serveMuxPattern() string {
 }
 
 func (route *Route) buildRouteHandler() http.Handler {
-	routeHandler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if route.HandleF == nil {
-			w.Write([]byte("route.HandleF is empty"))
-		} else {
-			//get MbrContext from request
-			mbrContext := Context(r)
-
-			//log.Println("Calling route.HandleF()")
-			output := route.HandleF(mbrContext)
-			//log.Println("route.HandleF() done")
-
-			processHandlerOutput(mbrContext, w, output)
-		}
-	}))
+	var routeHandler http.Handler
+	if route.FileFromFS != "" {
+		routeHandler = route.routeHandlerFileFromFS()
+	} else if route.StaticFS != nil {
+		routeHandler = route.routeHandlerStaticFS()
+	} else {
+		routeHandler = route.routeHandlerCustom()
+	}
 
 	//put handler through controller's middlewares
 	middlewares := route.ctrl.Middlewares()
@@ -103,6 +104,61 @@ func (route *Route) buildRouteHandler() http.Handler {
 	})
 }
 
+func (route *Route) routeHandlerCustom() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if route.HandleF == nil {
+			w.Write([]byte("route.HandleF is empty"))
+		} else {
+			//get MbrContext from request
+			mbrContext := Context(r)
+
+			//log.Println("Calling route.HandleF()")
+			output := route.HandleF(mbrContext)
+			//log.Println("route.HandleF() done")
+
+			processHandlerOutput(mbrContext, w, output)
+		}
+	})
+}
+
+func (route *Route) routeHandlerFileFromFS() http.Handler {
+	mttools.AssertNotNil(route.StaticFS, "StaticFS should be set when FileFromFS given")
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		file, err := route.StaticFS.Open(route.FileFromFS)
+
+		if err != nil {
+			log.Printf("FileFromFS error: %s\nRoute: %s [%s]\n", err.Error(), route.Name(), route.FullPath())
+			http.Error(w, fmt.Sprintf("Internal Error: %s", err.Error()), http.StatusInternalServerError)
+
+			return
+		}
+
+		buf := make([]byte, 4096)
+		for {
+			len, err := file.Read(buf)
+
+			if err != nil && err != io.EOF {
+				log.Printf("FileFromFS error: %s\nRoute: %s [%s]\n", err.Error(), route.Name(), route.FullPath())
+				http.Error(w, fmt.Sprintf("Internal Error: %s", err.Error()), http.StatusInternalServerError)
+
+				return
+			}
+
+			if len > 0 {
+				w.Write(buf)
+			} else {
+				break
+			}
+		}
+	})
+}
+
+func (route *Route) routeHandlerStaticFS() http.Handler {
+	staticServer := http.FileServerFS(route.StaticFS)
+	return http.StripPrefix(route.serveMuxPattern(), staticServer)
+}
+
 func processHandlerOutput(ctx *MbrContext, w http.ResponseWriter, output any) {
 	switch v := output.(type) {
 	case nil:
@@ -111,6 +167,7 @@ func processHandlerOutput(ctx *MbrContext, w http.ResponseWriter, output any) {
 	case error:
 		//errors issue 500 server error status
 		out := fmt.Sprintf("Internal Error: %s", v.Error())
+		log.Printf("Error 500: %s\nRoute: %s [%s]\n", v.Error(), ctx.route.Name(), ctx.route.FullPath())
 		http.Error(w, out, http.StatusInternalServerError)
 
 	default:
