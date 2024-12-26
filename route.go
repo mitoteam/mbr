@@ -98,7 +98,7 @@ func (route *Route) buildRouteHandler() http.Handler {
 		r = r.WithContext(httpCtx)
 		mbrContext.request = r
 
-		//log.Println("haha! New MbrContext created")
+		//log.Println("DBG: New MbrContext created")
 
 		routeHandler.ServeHTTP(w, r)
 	})
