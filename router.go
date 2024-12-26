@@ -107,7 +107,7 @@ func UrlE(routeRef any, args ...any) (r string, err error) {
 					return "", fmt.Errorf("Path values can not be empty (empty value for '%s')", argName)
 				}
 
-				r = strings.ReplaceAll(r, "{"+argName+"}", argValue)
+				r = strings.ReplaceAll(r, "{"+argName+"}", url.QueryEscape(argValue))
 			} else {
 				queryValues.Set(argName, argValue)
 			}
