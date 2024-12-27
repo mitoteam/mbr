@@ -162,16 +162,15 @@ func processHandlerOutput(ctx *MbrContext, w http.ResponseWriter, output any) {
 
 	case error:
 		//errors issue 500 server error status
-		out := fmt.Sprintf("Internal Error: %s", v.Error())
-		log.Printf("Error 500: %s\nRoute: %s [%s]\n", v.Error(), ctx.route.Name(), ctx.route.FullPath())
-		http.Error(w, out, http.StatusInternalServerError)
+		log.Printf("Error %d: %s\nRoute: %s [%s]\n", http.StatusInternalServerError, v.Error(), ctx.route.Name(), ctx.route.FullPath())
+		ctx.Error("Internal server Error: %s", v.Error())
 
 	default:
 		//try to convert it to string
 		if v, ok := mttools.AnyToStringOk(v); ok {
 			w.Write([]byte(v)) //sent string as-is
 		} else {
-			http.Error(w, fmt.Sprintf("Unknown handler output type: %s", reflect.TypeOf(output).String()), http.StatusInternalServerError)
+			ctx.Error("Unknown handler output type: %s", reflect.TypeOf(output).String())
 		}
 	}
 }

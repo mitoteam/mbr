@@ -1,6 +1,7 @@
 package mbr
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/mitoteam/mttools"
@@ -71,4 +72,14 @@ func (ctx *MbrContext) RedirectUrl(code int, routeRef any, args ...any) error {
 		ctx.Redirect(code, url)
 		return nil //no error
 	}
+}
+
+// Issues http error with given code
+func (ctx *MbrContext) ErrorWithCode(code int, error string, args ...any) {
+	http.Error(ctx.Writer(), fmt.Sprintf(error, args...), code)
+}
+
+// Issues http error "500 Internal server error"
+func (ctx *MbrContext) Error(error string, args ...any) {
+	http.Error(ctx.Writer(), fmt.Sprintf(error, args...), http.StatusInternalServerError)
 }
