@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"path"
 	"reflect"
+	"regexp"
 	"runtime"
 	"slices"
 	"strings"
@@ -114,6 +115,13 @@ func UrlE(routeRef any, args ...any) (r string, err error) {
 		}
 	}
 
+	//check is there any placeholders left
+	re := regexp.MustCompile(`\{([a-zA-Z0-9_]+)\}`)
+	leftOver := re.FindAllString(r, -1)
+	if len(leftOver) > 0 {
+		return "", fmt.Errorf("Following wildcard values required: %s", strings.Join(leftOver, ", "))
+	}
+
 	if len(queryValues) > 0 {
 		r += "?" + queryValues.Encode()
 	}
@@ -125,7 +133,7 @@ func Url(routeRef any, args ...any) (r string) {
 	url, err := UrlE(routeRef, args...)
 
 	if err != nil {
-		panic(err)
+		mttools.PanicWithSignature(err)
 	}
 
 	return url
