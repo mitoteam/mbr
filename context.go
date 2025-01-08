@@ -19,6 +19,8 @@ type MbrContext struct {
 	request *http.Request
 
 	values mttools.Values
+
+	redirect bool // flag to be set when Redirect() or RedirectRoute() method was called
 }
 
 // gets MbrContext from request's http.Context
@@ -61,7 +63,12 @@ func (ctx *MbrContext) Set(key string, value any) *MbrContext {
 
 // Helper to issue https redirects
 func (ctx *MbrContext) Redirect(code int, url string) {
+	ctx.redirect = true
 	http.Redirect(ctx.Writer(), ctx.Request(), url, code)
+}
+
+func (ctx *MbrContext) IsRedirect() bool {
+	return ctx.redirect
 }
 
 // Helper to issue https redirects. routeRef and args passed to UrlE()
