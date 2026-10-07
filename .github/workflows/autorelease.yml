@@ -1,0 +1,16 @@
+name: AutoRelease
+
+on:
+  push:
+    branches: [main]
+    paths: [VERSION]
+  workflow_dispatch:
+
+jobs:
+  call-shared-workflow:
+    uses: mitoteam/shared-actions/.github/workflows/go-pkg-autorelease.yml@main
+    secrets: inherit
+    permissions:
+      contents: write
+    with:
+          draft_release: false
