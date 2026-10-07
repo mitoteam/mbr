@@ -7,7 +7,7 @@
 
 [![GitHub Version](https://img.shields.io/github/v/release/mitoteam/mbr?logo=github)](https://github.com/mitoteam/mbr)
 [![GitHub Release](https://img.shields.io/github/release-date/mitoteam/mbr)](https://github.com/mitoteam/mbr/releases)
-[![GitHub commit activity](https://img.shields.io/github/commit-activity/y/mitoteam/mbr)](https://github.com/mitoteam/dhtml/commits)
+[![GitHub commit activity](https://img.shields.io/github/commit-activity/y/mitoteam/mbr)](https://github.com/mitoteam/mbr/commits)
 
 
 Simple [net/http](https://pkg.go.dev/net/http#ServeMux) stdlib-based router with:
