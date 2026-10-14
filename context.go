@@ -82,7 +82,7 @@ func (ctx *MbrContext) RedirectRoute(routeRef any, args ...any) {
 
 // true if context has "destination" parameter set
 func (ctx *MbrContext) HasDestination() bool {
-	return ctx.Request().PathValue("destination") != ""
+	return ctx.Request().URL.Query().Get("destination") != ""
 }
 
 // Issues http error with given code
