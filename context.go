@@ -80,6 +80,11 @@ func (ctx *MbrContext) RedirectRoute(routeRef any, args ...any) {
 	}
 }
 
+// true if context has "destination" parameter set
+func (ctx *MbrContext) HasDestination() bool {
+	return ctx.Request().PathValue("destination") != ""
+}
+
 // Issues http error with given code
 func (ctx *MbrContext) ErrorWithCode(code int, error string, args ...any) {
 	http.Error(ctx.Writer(), fmt.Sprintf(error, args...), code)
