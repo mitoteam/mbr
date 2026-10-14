@@ -72,11 +72,11 @@ func (ctx *MbrContext) IsRedirect() bool {
 }
 
 // Helper to issue https redirects. routeRef and args passed to UrlE()
-func (ctx *MbrContext) RedirectRoute(code int, routeRef any, args ...any) {
+func (ctx *MbrContext) RedirectRoute(routeRef any, args ...any) {
 	if url, err := UrlE(routeRef, args...); err != nil {
 		panic(err)
 	} else {
-		ctx.Redirect(code, url)
+		ctx.Redirect(http.StatusFound, url)
 	}
 }
 
