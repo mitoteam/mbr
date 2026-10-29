@@ -2,7 +2,9 @@ package mbr
 
 import (
 	"fmt"
+	"net"
 	"net/http"
+	"strings"
 
 	"github.com/mitoteam/mttools"
 )
@@ -46,6 +48,23 @@ func (ctx *MbrContext) Writer() http.ResponseWriter {
 
 func (ctx *MbrContext) Request() *http.Request {
 	return ctx.request
+}
+
+// Returns real client IP address
+func (ctx *MbrContext) GetClientIP() string {
+	if header_value := ctx.request.Header.Get("X-Forwarded-For"); header_value != "" {
+		return strings.TrimSpace(strings.Split(header_value, ",")[0])
+	}
+
+	if header_value := ctx.request.Header.Get("X-Real-Ip"); header_value != "" {
+		return strings.TrimSpace(strings.Split(header_value, ",")[0])
+	}
+
+	if ip, _, err := net.SplitHostPort(ctx.request.RemoteAddr); err == nil {
+		return ip
+	}
+
+	return ctx.request.RemoteAddr
 }
 
 func (ctx *MbrContext) GetOk(key string) (any, bool) {
